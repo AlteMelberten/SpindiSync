@@ -1,14 +1,39 @@
-const { Plugin } = require("obsidian");
+const { Plugin, Notice } = require("obsidian");
+const update = require("./update.js"); // Importiere die Funktionen aus der update.js
 
 module.exports = class TestPlugin extends Plugin {
-  onload() {
-    console.log("Test-Plugin Version 1.0.0 erfolgreich geladen!");
+  async onload() {
+    console.log(
+      this.manifest.name,
+      " geladen, Version:",
+      this.manifest.version
+    );
 
-    //  Protokolliere die URL zur Versionsprüfung
-    console.log("Update-URL in der Manifest:", this.manifest.updateUrl);
+    // Hole die updateUrl aus der manifest.json
+    const updateUrl =
+      this.manifest.updateUrl ||
+      "https://raw.githubusercontent.com/AlteMelberten/test-plugin/main/versions.json";
+
+    // Starte den Update-Checker
+    await update.checkForUpdates(this, updateUrl);
+  }
+
+  // Speichern der Dateien
+  async saveFile(fileName, content) {
+    const pluginFolder =
+      this.app.vault.adapter.basePath +
+      "/.obsidian/plugins/" +
+      this.manifest.id;
+
+    const fs = require("fs");
+    const path = require("path");
+
+    const filePath = path.join(pluginFolder, fileName);
+    fs.writeFileSync(filePath, content, "utf-8");
+    console.log(`Datei gespeichert: ${filePath}`);
   }
 
   onunload() {
-    console.log("Test-Plugin wurde entladen.");
+    console.log("Test-Plugin entladen.");
   }
 };
