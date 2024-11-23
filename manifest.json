@@ -1,9 +1,9 @@
 {
   "id": "test-plugin",
   "name": "Test neues Release",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "nur ein Test, ob neues Release geladen wird",
   "author": "spindi",
-  "authorUrl": "https://"
+  "authorUrl": "https://github.com/AlteMelberten",
   "minAppVersion": "0.15.0"
 }
