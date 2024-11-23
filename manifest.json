@@ -1,0 +1,8 @@
+{
+  "id": "test-plugin",
+  "name": "Test neues Release",
+  "version": "0.1.0",
+  "description": "nur ein Test, ob neues Release geladen wird",
+  "author": "spindi",
+  "minAppVersion": "0.15.0"
+}
