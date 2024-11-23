@@ -1,5 +1,5 @@
 const { Plugin, Notice } = require("obsidian");
-const update = require("./update.js"); // Importiere die Funktionen aus der update.js
+const path = require("path");
 
 module.exports = class TestPlugin extends Plugin {
   async onload() {
@@ -8,6 +8,17 @@ module.exports = class TestPlugin extends Plugin {
       " geladen, Version:",
       this.manifest.version
     );
+
+    const pluginFolder =
+      this.app.vault.adapter.basePath +
+      "/.obsidian/plugins/" +
+      this.manifest.id;
+
+    // Absoluter Pfad zur Datei update.js
+    const updatePath = path.join(pluginFolder, "update.js");
+
+    //Modul dynamisch importieren
+    const update = require(updatePath);
 
     // Hole die updateUrl aus der manifest.json
     const updateUrl =
