@@ -2,10 +2,10 @@ const { Plugin } = require("obsidian");
 
 module.exports = class TestPlugin extends Plugin {
   onload() {
-    console.log("Test-Plugin erfolgreich geladen!");
+    console.log("Test-Plugin Version 1.0.0 erfolgreich geladen!");
 
-    // Protokolliere die URL zur Versionsprüfung
-    // console.log("Update-URL in der Manifest:", this.manifest.updateUrl);
+     Protokolliere die URL zur Versionsprüfung
+     console.log("Update-URL in der Manifest:", this.manifest.updateUrl);
   }
 
   onunload() {
