@@ -53,15 +53,10 @@ module.exports = class TestPlugin extends Plugin {
     try {
       const filesToUpdate = ["manifest.json", "main.js"];
       const repoBase = `https://raw.githubusercontent.com/AlteMelberten/test-plugin/${latestVersion}/`;
-      // const repoBase = `https://raw.githubusercontent.com/AlteMelberten/test-plugin/${latestVersion}/?cache_bust=${Date.now()}`;
 
       // Lade jede Datei herunter und speichere sie
       for (const file of filesToUpdate) {
         const fileUrl = `${repoBase}${file}`;
-
-        //check: richtige Datei???
-        console.log("downloaden: ", fileUrl);
-
         const response = await fetch(fileUrl);
         if (!response.ok) {
           throw new Error(
@@ -151,29 +146,32 @@ class ReloadPluginModal extends Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.setText(
-      "Das Plugin wurde erfolgreich aktualisiert. Um die Änderungen vollständig zu übernehmen, sollte Obsidian neu geladen werden."
+      "Das Plugin wurde erfolgreich aktualisiert. Um die Änderungen wirksam zu machen, wird das Plugin jetzt deaktiviert und wieder aktiviert."
     );
 
     const buttonContainer = contentEl.createDiv({
       cls: "modal-button-container",
     });
 
-    // "Obsidian neu laden"-Button
+    // "Plugin neu laden"-Button
     const reloadButton = buttonContainer.createEl("button", {
-      text: "Obsidian neu laden",
+      text: "Plugin neu laden",
     });
     reloadButton.onclick = () => {
       this.close();
-      // Führe den Obsidian-Befehl aus, um die App neu zu laden
-      this.plugin.app.commands.executeCommandById("app:reload");
-      new Notice("Obsidian wird neu geladen...");
+      this.plugin.app.plugins
+        .disablePlugin(this.plugin.manifest.id)
+        .then(() => {
+          this.plugin.app.plugins.enablePlugin(this.plugin.manifest.id);
+        });
+      new Notice("Plugin wird neu geladen.");
     };
 
     // "Später"-Button
     const laterButton = buttonContainer.createEl("button", { text: "Später" });
     laterButton.onclick = () => {
       this.close();
-      new Notice("Das Plugin wird nach einem Neustart aktualisiert.");
+      new Notice("Bitte lade das Plugin später neu.");
     };
   }
 
