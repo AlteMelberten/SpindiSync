@@ -107,14 +107,13 @@ module.exports = class TestPlugin extends Plugin {
   onunload() {
     console.log("Test-Plugin entladen.");
   }
+  // Hauptaufgabe des Plugins : markdown Dateien und Assets kopieren
+
+  performMainTask() {
+    console.log("Hauptaufgabe wird ausgeführt...");
+    // der eigentliche Code kommt hier hin
+  }
 };
-
-// Hauptaufgabe des Plugins : markdown Dateien und Assets kopieren
-
-function performMainTask() {
-  console.log("Hauptaufgabe wird ausgeführt...");
-  // der eigentliche Code kommt hier hin
-}
 
 // Modal für Update-Bestätigung
 class UpdateModal extends Modal {
