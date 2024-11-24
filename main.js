@@ -113,7 +113,7 @@ module.exports = class TestPlugin extends Plugin {
 
 function performMainTask() {
   console.log("Hauptaufgabe wird ausgeführt...");
-  // der eigentliche Code
+  // der eigentliche Code kommt hier hin
 }
 
 // Modal für Update-Bestätigung
