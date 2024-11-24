@@ -11,11 +11,14 @@ module.exports = class TestPlugin extends Plugin {
 
     // Starte den Update-Checker
     await this.checkForUpdates(updateUrl);
+
+    // Hauptaufgabe des Plugins ausführen
+    this.performMainTask();
   }
 
   async checkForUpdates(updateUrl) {
     try {
-      // Abrufen der `versions.json` aus der angegebenen URL
+      // Abrufen der `versions.json`
       const response = await fetch(updateUrl);
       if (!response.ok) {
         throw new Error(
@@ -38,14 +41,18 @@ module.exports = class TestPlugin extends Plugin {
           `Eine neue Version (${latestVersion}) des Plugins ist verfügbar!`
         );
 
-        // Öffne ein Modal zur Bestätigung
+        // Modal zur Bestätigung des Updates anzeigen
         const modal = new UpdateModal(this.app, latestVersion, this);
         modal.open();
       } else {
         console.log("Keine Updates verfügbar.");
       }
     } catch (error) {
-      console.error("Fehler beim Update-Check:", error);
+      // Fehler beim Update-Check ignorieren
+      console.warn("Fehler beim Update-Check:", error);
+      new Notice(
+        "Update-Check fehlgeschlagen. Das Plugin funktioniert weiterhin."
+      );
     }
   }
 
@@ -101,6 +108,13 @@ module.exports = class TestPlugin extends Plugin {
     console.log("Test-Plugin entladen.");
   }
 };
+
+// Hauptaufgabe des Plugins : markdown Dateien und Assets kopieren
+
+function performMainTask() {
+  console.log("Hauptaufgabe wird ausgeführt...");
+  // der eigentliche Code
+}
 
 // Modal für Update-Bestätigung
 class UpdateModal extends Modal {
