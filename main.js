@@ -5,9 +5,14 @@ module.exports = class TestPlugin extends Plugin {
     console.log("Test-Plugin geladen, Version:", this.manifest.version);
 
     // Hole die updateUrl aus der manifest.json
-    const updateUrl =
+    const updateUrl = this.manifest.updateUrl;
+
+    console.log("updateUrl :", updateUrl);
+
+    //vorherige Version mit ODER-Verknüpfung
+    /* const updateUrl =
       this.manifest.updateUrl ||
-      "https://raw.githubusercontent.com/AlteMelberten/test-plugin/main/versions.json";
+      "https://raw.githubusercontent.com/AlteMelberten/test-plugin/main/versions.json"; */
 
     // Starte den Update-Checker
     await this.checkForUpdates(updateUrl);
