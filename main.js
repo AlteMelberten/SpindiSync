@@ -26,6 +26,22 @@ module.exports = class TestPlugin extends Plugin {
     if (this.settings.fetchOnStartup) {
       this.runDownload();
     }
+
+    // Füge Plugin-Kommandos hinzu
+    this.addCommand({
+      id: "run-fetch",
+      name: "Run Synchronization",
+      callback: () => {
+        this.runDownload();
+      },
+    });
+
+    this.addRibbonIcon("refresh-cw", "Run Spindi Download", async () => {
+      await this.runDownload();
+    });
+
+    // Plugin-Einstellungen
+    this.addSettingTab(new MySyncPluginSettingTab(this.app, this));
   }
 
   //DEF der Plugin-Funktionen für onload
