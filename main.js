@@ -1,4 +1,4 @@
-const { Plugin, Modal, Notice } = require("obsidian");
+const { Plugin, PluginSettingTab, Modal, Notice } = require("obsidian");
 
 module.exports = class TestPlugin extends Plugin {
   async onload() {
