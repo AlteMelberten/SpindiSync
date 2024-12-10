@@ -215,7 +215,7 @@ module.exports = class TestPlugin extends Plugin {
   }
   // Einstellungen in data.json speichern
   async saveSettings() {
-    await this.saveData(this.settings);
+    await this.saveData();
   }
 };
 
@@ -356,3 +356,4 @@ class ReloadPluginModal extends Modal {
     contentEl.empty();
   }
 }
+this.settings
