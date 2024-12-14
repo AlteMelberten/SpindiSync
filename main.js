@@ -8,7 +8,7 @@ const {
 
 module.exports = class TestPlugin extends Plugin {
   async onload() {
-    console.log("Test-Plugin geladen, Version:", this.manifest.version);
+    console.log("SpindiSync-Plugin geladen, Version:", this.manifest.version);
 
     // Hole die updateUrl aus der manifest.json
     const updateUrl = this.manifest.updateUrl;
@@ -18,7 +18,7 @@ module.exports = class TestPlugin extends Plugin {
     //vorherige Version mit ODER-Verknüpfung
     /* const updateUrl =
       this.manifest.updateUrl ||
-      "https://raw.githubusercontent.com/AlteMelberten/test-plugin/main/versions.json"; */
+      "https://raw.githubusercontent.com/AlteMelberten/SpindiSync/main/versions.json"; */
 
     // Starte den Update-Checker
     await this.checkForUpdates(updateUrl);
@@ -94,8 +94,8 @@ module.exports = class TestPlugin extends Plugin {
   async downloadAndSave(latestVersion) {
     try {
       const filesToUpdate = ["manifest.json", "main.js"];
-      const repoBase = `https://raw.githubusercontent.com/AlteMelberten/test-plugin/${latestVersion}/`;
-      // const repoBase = `https://raw.githubusercontent.com/AlteMelberten/test-plugin/${latestVersion}/?cache_bust=${Date.now()}`;
+      const repoBase = `https://raw.githubusercontent.com/AlteMelberten/SpindiSync/${latestVersion}/`;
+      // const repoBase = `https://raw.githubusercontent.com/AlteMelberten/SpindiSync/${latestVersion}/?cache_bust=${Date.now()}`;
 
       // Lade jede Datei herunter und speichere sie
       for (const file of filesToUpdate) {
@@ -140,7 +140,7 @@ module.exports = class TestPlugin extends Plugin {
   }
   //Wenn Plugin entladen wird
   onunload() {
-    console.log("Test-Plugin entladen.");
+    console.log("SpindiSync Plugin entladen.");
   }
   //NOTE : Hauptfunktionen des Plugins : markdown Dateien und Assets kopieren
   // Einstellungen aus data.json laden
@@ -152,7 +152,7 @@ module.exports = class TestPlugin extends Plugin {
     this.settings = {
       sourceDir:
         savedSettings?.sourceDir ||
-        "E:\\Schule\\Fächer\\INF\\inf 07\\KST7_Sourcesync",
+        "E:\\Schule\\Fächer\\INF\\inf 07\\KST7_Src_test",
       logEnabled: savedSettings?.logEnabled ?? true,
       fetchOnStartup: savedSettings?.fetchOnStartup ?? false, // Standardwert nur, wenn keine gespeicherten Daten vorhanden sind
     };
@@ -171,19 +171,20 @@ module.exports = class TestPlugin extends Plugin {
     const logFilePath = path.join(logDir, "log.md");
     const ordnerListe = ["pages", "assets"]; // Liste der herunterzuladenden Ordner
 
+    // Array für die Log-Ausgaben, die später angezeigt werden
+    const logMessages = [];
+
     function writeLog(message) {
       if (logEnabled) {
         fs.appendFileSync(logFilePath, message + "\n", "utf8");
       }
+      //fügt Nachricht dem Array hinzu
+      logMessages.push(message);
     }
 
     function fetchFiles(sourceDir) {
       const timestamp = new Date().toLocaleString();
-      writeLog(
-        `\n--- Synchronisation für ${path.basename(
-          sourceDir
-        )} am ${timestamp} ---`
-      );
+      writeLog(`\n-- im Ordner ${path.basename(sourceDir)} am ${timestamp} --`);
 
       fs.readdirSync(sourceDir).forEach((file) => {
         const sourceFilePath = path.join(sourceDir, file);
@@ -211,7 +212,13 @@ module.exports = class TestPlugin extends Plugin {
       fetchFiles(sourceDir);
     });
 
-    new Notice("Download abgeschlossen.");
+    // Anzeigen der Log-Meldungen in einem Notizfenster
+    if (logMessages.length > 0) {
+      const notificationMessage = logMessages.join("\n");
+      new Notice(`Download abgeschlossen:\n${notificationMessage}`, 10000); // Anzeige für 8 Sekunden
+    } else {
+      new Notice("Keine Dateien zum Synchronisieren gefunden.", 10000);
+    }
   }
   // Einstellungen in data.json speichern
   async saveSettings() {
@@ -356,4 +363,4 @@ class ReloadPluginModal extends Modal {
     contentEl.empty();
   }
 }
-this.settings
+this.settings;
