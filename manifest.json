@@ -2,7 +2,7 @@
   "id": "SpindiSync",
   "name": "SpindiSync",
   "version": "1.3.0",
-  "description": "nur ein Test, ob neues Release geladen wird",
+  "description": "lädt Dateien von einem Quellverzeichnis in das Obsidian-Verzeichnis des Nutzers",
   "minAppVersion": "0.15.0",
   "author": "spindi",
   "updateUrl": "https://raw.githubusercontent.com/AlteMelberten/SpindiSync/main/versions.json"
