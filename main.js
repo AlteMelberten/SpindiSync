@@ -91,6 +91,7 @@ module.exports = class TestPlugin extends Plugin {
     }
   }
 
+  // Herunterladen der neuesten Plugin-Version
   async downloadAndSave(latestVersion) {
     try {
       const filesToUpdate = ["manifest.json", "main.js"];
@@ -123,7 +124,7 @@ module.exports = class TestPlugin extends Plugin {
       console.error("Fehler beim Herunterladen des Updates:", error);
     }
   }
-
+  // Speichert Datei für das Plugin-Update (!) ins Plugin-Verzeichnis
   async saveFile(fileName, content) {
     const pluginFolder =
       this.app.vault.adapter.basePath +
@@ -142,7 +143,8 @@ module.exports = class TestPlugin extends Plugin {
   onunload() {
     console.log("SpindiSync Plugin entladen.");
   }
-  //NOTE : Hauptfunktionen des Plugins : markdown Dateien und Assets kopieren
+
+  // Hauptfunktionen des Plugins : markdown Dateien und Assets kopieren
   // Einstellungen aus data.json laden
   async loadSettings() {
     // Lade die gespeicherten Daten, wenn vorhanden
