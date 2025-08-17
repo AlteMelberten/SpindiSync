@@ -217,14 +217,14 @@ module.exports = class TestPlugin extends Plugin {
     // Anzeigen der Log-Meldungen in einem Notizfenster
     if (logMessages.length > 0) {
       const notificationMessage = logMessages.join("\n");
-      new Notice(`Download abgeschlossen:\n${notificationMessage}`, 10000); // Anzeige für 8 Sekunden
+      new Notice(`Download abgeschlossen:\n${notificationMessage}`, 10000); // Anzeige für 10 Sekunden
     } else {
       new Notice("Keine Dateien zum Synchronisieren gefunden.", 10000);
     }
   }
   // Einstellungen in data.json speichern
   async saveSettings() {
-    await this.saveData();
+    await this.saveData(this.settings);
   }
 };
 
