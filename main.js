@@ -1,59 +1,201 @@
-const {
-  Plugin,
-  PluginSettingTab,
-  Modal,
-  Notice,
-  Setting,
-} = require("obsidian");
+"use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-module.exports = class TestPlugin extends Plugin {
+// src/main.ts
+var main_exports = {};
+__export(main_exports, {
+  default: () => SpindiSyncPlugin
+});
+module.exports = __toCommonJS(main_exports);
+var fs = __toESM(require("node:fs/promises"));
+var path = __toESM(require("node:path"));
+var import_obsidian2 = require("obsidian");
+
+// src/settings/settingstab.ts
+var import_obsidian = require("obsidian");
+var SpindiSyncSettingTab = class extends import_obsidian.PluginSettingTab {
+  constructor(app, plugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+    containerEl.createEl("h2", { text: "Einstellungen f\xFCr Download" });
+    new import_obsidian.Setting(containerEl).setName("Quellverzeichnis").setDesc("Pfad zu dem Ordner, der heruntergeladen werden soll.").addText((text) => {
+      text.setPlaceholder("Pfad zum Quellordner").setValue(this.plugin.settings.sourceDir).onChange(async (value) => {
+        this.plugin.settings.sourceDir = value;
+        await this.plugin.saveSettings();
+      });
+      text.inputEl.style.width = "100%";
+    });
+    new import_obsidian.Setting(containerEl).setName("Log-Datei verwenden").setDesc("Erstellt eine Log-Datei der heruntergeladenen Dateien.").addToggle((toggle) => {
+      toggle.setValue(this.plugin.settings.logEnabled).onChange(async (value) => {
+        this.plugin.settings.logEnabled = value;
+        await this.plugin.saveSettings();
+      });
+    });
+    new import_obsidian.Setting(containerEl).setName("Download beim Start von Obsidian").setDesc("F\xFChrt den Download jedes Mal beim Start von Obsidian aus.").addToggle((toggle) => {
+      toggle.setValue(this.plugin.settings.fetchOnStartup).onChange(async (value) => {
+        this.plugin.settings.fetchOnStartup = value;
+        await this.plugin.saveSettings();
+      });
+    });
+  }
+};
+
+// src/settings/settings.ts
+var DEFAULT_SETTINGS = {
+  sourceDir: "E:\\Schule\\F\xE4cher\\INF\\inf 07\\KST7_Src_test",
+  logEnabled: true,
+  fetchOnStartup: false
+};
+
+// src/main.ts
+function getVaultRoot(adapter) {
+  if (!("basePath" in adapter) || typeof adapter.basePath !== "string") {
+    throw new Error("Der lokale Dateisystempfad des Vaults ist nicht verf\xFCgbar.");
+  }
+  return adapter.basePath;
+}
+function isNotFoundError(error) {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
+}
+var SpindiSyncPlugin = class extends import_obsidian2.Plugin {
+  constructor() {
+    super(...arguments);
+    this.settings = DEFAULT_SETTINGS;
+  }
   async onload() {
     console.log("SpindiSync-Plugin geladen, Version:", this.manifest.version);
-
-    // Hole die updateUrl aus der manifest.json
-    const updateUrl = this.manifest.updateUrl;
-
-    console.log("updateUrl :", updateUrl);
-
-    //vorherige Version mit ODER-Verknüpfung
-    /* const updateUrl =
-      this.manifest.updateUrl ||
-      "https://raw.githubusercontent.com/AlteMelberten/SpindiSync/main/versions.json"; */
-
-    // Starte den Update-Checker
-    await this.checkForUpdates(updateUrl);
-
-    // Hauptaufgabe des Plugins ausführen
-    //TODO hier Das Herunterladen der pages- und assets einbauen
-    //Lade Einstellungen
     await this.loadSettings();
-
-    // Download von Assets/Pages bei Start ausführen, falls aktiviert
+    await this.checkForUpdates();
     if (this.settings.fetchOnStartup) {
-      this.runDownload();
+      void this.runDownload();
     }
-
-    // Füge Plugin-Kommandos hinzu
     this.addCommand({
       id: "run-fetch",
       name: "Run Synchronization",
-      callback: () => {
-        this.runDownload();
-      },
+      callback: () => this.runDownload()
     });
-
-    this.addRibbonIcon("refresh-cw", "Run Spindi Download", async () => {
-      await this.runDownload();
-    });
-
-    // Plugin-Einstellungen
-    this.addSettingTab(new MySyncPluginSettingTab(this.app, this));
+    this.addRibbonIcon(
+      "refresh-cw",
+      "Run Spindi Download",
+      () => this.runDownload()
+    );
+    this.addSettingTab(new SpindiSyncSettingTab(this.app, this));
   }
-
-  //DEF der Plugin-Funktionen für onload
-  async checkForUpdates(updateUrl) {
+  onunload() {
+    console.log("SpindiSync Plugin entladen.");
+  }
+  async loadSettings() {
+    const savedSettings = await this.loadData();
+    this.settings = {
+      ...DEFAULT_SETTINGS,
+      ...savedSettings
+    };
+  }
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
+  async runDownload() {
     try {
-      // Abrufen der `versions.json`
+      const sourceRoot = this.settings.sourceDir.trim();
+      if (!sourceRoot) {
+        throw new Error("Bitte zuerst ein Quellverzeichnis festlegen.");
+      }
+      const vaultRoot = getVaultRoot(this.app.vault.adapter);
+      const targetFolders = ["pages", "assets"];
+      const logFilePath = path.join(vaultRoot, "pages", "log.md");
+      const logMessages = [];
+      await fs.mkdir(path.dirname(logFilePath), { recursive: true });
+      const writeLog = async (message2) => {
+        logMessages.push(message2);
+        if (this.settings.logEnabled) {
+          await fs.appendFile(logFilePath, `${message2}
+`, "utf8");
+        }
+      };
+      for (const folder of targetFolders) {
+        const sourceDir = path.join(sourceRoot, folder);
+        const targetDir = path.join(vaultRoot, folder);
+        await fs.mkdir(targetDir, { recursive: true });
+        await writeLog(
+          `
+-- im Ordner ${folder} am ${(/* @__PURE__ */ new Date()).toLocaleString()} --`
+        );
+        await this.copyMissingFiles(sourceDir, targetDir, vaultRoot, writeLog);
+        await writeLog("");
+      }
+      const message = logMessages.length > 0 ? `Download abgeschlossen:
+${logMessages.join("\n")}` : "Keine Dateien zum Synchronisieren gefunden.";
+      new import_obsidian2.Notice(message, 1e4);
+    } catch (error) {
+      console.error("Fehler beim Synchronisieren:", error);
+      const message = error instanceof Error ? error.message : "Unbekannter Fehler";
+      new import_obsidian2.Notice(`Download fehlgeschlagen: ${message}`, 1e4);
+    }
+  }
+  async copyMissingFiles(sourceDir, targetDir, vaultRoot, writeLog) {
+    const entries = await fs.readdir(sourceDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const sourcePath = path.join(sourceDir, entry.name);
+      const targetPath = path.join(targetDir, entry.name);
+      const relativePath = path.relative(vaultRoot, targetPath);
+      if (entry.isDirectory()) {
+        await fs.mkdir(targetPath, { recursive: true });
+        await this.copyMissingFiles(
+          sourcePath,
+          targetPath,
+          vaultRoot,
+          writeLog
+        );
+      } else if (entry.isFile()) {
+        try {
+          await fs.access(targetPath);
+          await writeLog(`\xDCbersprungen (bereits vorhanden): ${relativePath}`);
+        } catch (error) {
+          if (!isNotFoundError(error)) {
+            throw error;
+          }
+          await fs.copyFile(sourcePath, targetPath);
+          await writeLog(`Kopiert: ${relativePath}`);
+        }
+      }
+    }
+  }
+  async checkForUpdates() {
+    const updateUrl = this.manifest.updateUrl;
+    if (!updateUrl) {
+      return;
+    }
+    try {
       const response = await fetch(updateUrl);
       if (!response.ok) {
         throw new Error(
@@ -61,308 +203,111 @@ module.exports = class TestPlugin extends Plugin {
         );
       }
       const versions = await response.json();
-      console.log("Versions.json abgerufen:", versions);
-
-      // Neueste Version ermitteln
-      const latestVersion = Object.keys(versions).sort().pop();
-      console.log("Neueste Version:", latestVersion);
-
-      // Versionsvergleich
-      if (latestVersion > this.manifest.version) {
-        console.log(
-          `Update verfügbar: ${latestVersion} > ${this.manifest.version}`
+      const latestVersion = Object.keys(versions).sort(compareVersions).pop();
+      if (latestVersion && compareVersions(latestVersion, this.manifest.version) > 0) {
+        new import_obsidian2.Notice(
+          `Eine neue Version (${latestVersion}) des Plugins ist verf\xFCgbar!`
         );
-        new Notice(
-          `Eine neue Version (${latestVersion}) des Plugins ist verfügbar!`
-        );
-
-        // Modal zur Bestätigung des Updates anzeigen
-        const modal = new UpdateModal(this.app, latestVersion, this);
-        modal.open();
-      } else {
-        console.log("Keine Updates verfügbar.");
+        new UpdateModal(this.app, latestVersion, this).open();
       }
     } catch (error) {
-      // Fehler beim Update-Check ignorieren
       console.warn("Fehler beim Update-Check:", error);
-      new Notice(
+      new import_obsidian2.Notice(
         "Update-Check fehlgeschlagen. Das Plugin funktioniert weiterhin."
       );
     }
   }
-
-  // Herunterladen der neuesten Plugin-Version
   async downloadAndSave(latestVersion) {
+    var _a;
     try {
       const filesToUpdate = ["manifest.json", "main.js"];
       const repoBase = `https://raw.githubusercontent.com/AlteMelberten/SpindiSync/${latestVersion}/`;
-      // const repoBase = `https://raw.githubusercontent.com/AlteMelberten/SpindiSync/${latestVersion}/?cache_bust=${Date.now()}`;
-
-      // Lade jede Datei herunter und speichere sie
+      const vaultRoot = getVaultRoot(this.app.vault.adapter);
+      const pluginFolder = path.join(
+        vaultRoot,
+        (_a = this.manifest.dir) != null ? _a : path.join(this.app.vault.configDir, "plugins", this.manifest.id)
+      );
       for (const file of filesToUpdate) {
-        const fileUrl = `${repoBase}${file}`;
-
-        //check: richtige Datei???
-        console.log("downloaden: ", fileUrl);
-
-        const response = await fetch(fileUrl);
+        const response = await fetch(`${repoBase}${file}`);
         if (!response.ok) {
-          throw new Error(
-            `Fehler beim Abrufen von ${file}: ${response.status}`
-          );
+          throw new Error(`Fehler beim Abrufen von ${file}: ${response.status}`);
         }
-
-        const content = await response.text();
-        console.log(`Datei ${file} heruntergeladen, Länge: ${content.length}`);
-        await this.saveFile(file, content);
+        await fs.writeFile(
+          path.join(pluginFolder, file),
+          await response.text(),
+          "utf8"
+        );
       }
-
-      // Update-Hinweis anzeigen und Plugin deaktivieren/aktivieren
-      const reloadModal = new ReloadPluginModal(this.app, this);
-      reloadModal.open();
+      new ReloadPluginModal(this.app).open();
     } catch (error) {
       console.error("Fehler beim Herunterladen des Updates:", error);
+      const message = error instanceof Error ? error.message : "Unbekannter Fehler";
+      new import_obsidian2.Notice(`Update fehlgeschlagen: ${message}`);
     }
-  }
-  // Speichert Datei für das Plugin-Update (!) ins Plugin-Verzeichnis
-  async saveFile(fileName, content) {
-    const pluginFolder =
-      this.app.vault.adapter.basePath +
-      "/.obsidian/plugins/" +
-      this.manifest.id;
-
-    // Verwende Node.js-Funktionen, um Dateien zu speichern
-    const fs = require("fs");
-    const path = require("path");
-
-    const filePath = path.join(pluginFolder, fileName);
-    fs.writeFileSync(filePath, content, "utf-8");
-    console.log(`Datei gespeichert: ${filePath}`);
-  }
-  //Wenn Plugin entladen wird
-  onunload() {
-    console.log("SpindiSync Plugin entladen.");
-  }
-
-  // Hauptfunktionen des Plugins : markdown Dateien und Assets kopieren
-  // Einstellungen aus data.json laden
-  async loadSettings() {
-    // Lade die gespeicherten Daten, wenn vorhanden
-    const savedSettings = await this.loadData();
-
-    // Verwende gespeicherte Einstellungen, wenn vorhanden, sonst Standardwerte
-    this.settings = {
-      sourceDir:
-        savedSettings?.sourceDir ||
-        "E:\\Schule\\Fächer\\INF\\inf 07\\KST7_Src_test",
-      logEnabled: savedSettings?.logEnabled ?? true,
-      fetchOnStartup: savedSettings?.fetchOnStartup ?? false, // Standardwert nur, wenn keine gespeicherten Daten vorhanden sind
-    };
-  }
-
-  /* rundownload ist übergeordnete Funktion, ruft writeLog und fetchFiles auf,
-   die innerhalb von rundownload definiert werden */
-  async runDownload() {
-    const fs = require("fs");
-    const path = require("path");
-
-    const baseSourceDir = this.settings.sourceDir; // Vom Benutzer gesetztes Quellverzeichnis
-    const targetDir = app.vault.adapter.basePath; // Zielverzeichnis (Obsidian-Vault)
-    const logEnabled = this.settings.logEnabled; // Logging aktivieren oder nicht
-    const logDir = path.join(targetDir, "pages");
-    const logFilePath = path.join(logDir, "log.md");
-    const ordnerListe = ["pages", "assets"]; // Liste der herunterzuladenden Ordner
-
-    // Array für die Log-Ausgaben, die später angezeigt werden
-    const logMessages = [];
-
-    function writeLog(message) {
-      if (logEnabled) {
-        fs.appendFileSync(logFilePath, message + "\n", "utf8");
-      }
-      //fügt Nachricht dem Array hinzu
-      logMessages.push(message);
-    }
-
-    function fetchFiles(sourceDir) {
-      const timestamp = new Date().toLocaleString();
-      writeLog(`\n-- im Ordner ${path.basename(sourceDir)} am ${timestamp} --`);
-
-      fs.readdirSync(sourceDir).forEach((file) => {
-        const sourceFilePath = path.join(sourceDir, file);
-        const targetFilePath = path.join(
-          targetDir,
-          path.basename(sourceDir),
-          file
-        );
-        const relativePath = path.relative(targetDir, targetFilePath);
-
-        if (!fs.existsSync(targetFilePath)) {
-          fs.copyFileSync(sourceFilePath, targetFilePath);
-          writeLog(`Kopiert: ${relativePath}`);
-        } else {
-          writeLog(`Übersprungen (bereits vorhanden): ${relativePath}`);
-        }
-      });
-      writeLog("");
-    }
-
-    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-
-    ordnerListe.forEach((ordner) => {
-      const sourceDir = path.join(baseSourceDir, ordner);
-      fetchFiles(sourceDir);
-    });
-
-    // Anzeigen der Log-Meldungen in einem Notizfenster
-    if (logMessages.length > 0) {
-      const notificationMessage = logMessages.join("\n");
-      new Notice(`Download abgeschlossen:\n${notificationMessage}`, 10000); // Anzeige für 10 Sekunden
-    } else {
-      new Notice("Keine Dateien zum Synchronisieren gefunden.", 10000);
-    }
-  }
-  // Einstellungen in data.json speichern
-  async saveSettings() {
-    await this.saveData(this.settings);
   }
 };
-
-//################ Obsidian-EINSTELLUNGS-TAB ###############
-class MySyncPluginSettingTab extends PluginSettingTab {
-  constructor(app, plugin) {
-    super(app, plugin);
-    this.plugin = plugin;
+function compareVersions(left, right) {
+  var _a, _b;
+  const leftParts = left.split(".").map(Number);
+  const rightParts = right.split(".").map(Number);
+  const partCount = Math.max(leftParts.length, rightParts.length);
+  for (let index = 0; index < partCount; index += 1) {
+    const difference = ((_a = leftParts[index]) != null ? _a : 0) - ((_b = rightParts[index]) != null ? _b : 0);
+    if (difference !== 0) {
+      return difference;
+    }
   }
-
-  display() {
-    const { containerEl } = this;
-    containerEl.empty();
-
-    containerEl.createEl("h2", { text: "Einstellungen für Download" });
-
-    // Einstellung für den Quellordner
-    new Setting(containerEl)
-      .setName("Quellverzeichnis")
-      .setDesc("Pfad zu dem Ordner, der runtergeladen werden soll.")
-      .addText((text) => {
-        text
-          .setPlaceholder("Pfad zum Quellordner")
-          .setValue(this.plugin.settings.sourceDir)
-          .onChange(async (value) => {
-            this.plugin.settings.sourceDir = value;
-            await this.plugin.saveSettings(); // Stelle sicher, dass die Einstellungen gespeichert werden
-          });
-        text.inputEl.style.width = "100%"; // Breite des Textfeldes anpassen
-      });
-
-    // Einstellung für Log-Datei
-    new Setting(containerEl)
-      .setName("Log-Datei verwenden")
-      .setDesc("Erstellt eine Log-Datei der herunterzuladenden Dateien.")
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.plugin.settings.logEnabled)
-          .onChange(async (value) => {
-            this.plugin.settings.logEnabled = value;
-            await this.plugin.saveSettings(); // Stelle sicher, dass die Einstellungen gespeichert werden
-          });
-      });
-
-    // Einstellung für Download beim Start
-    new Setting(containerEl)
-      .setName("Download beim Start von Obsidian")
-      .setDesc("Führt den Download jedesmal beim Start von Obsidian aus.")
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.plugin.settings.fetchOnStartup) // Setze den initialen Wert der Einstellung
-          .onChange(async (value) => {
-            this.plugin.settings.fetchOnStartup = value; // Aktualisiere die Einstellung
-            await this.plugin.saveSettings(); // Speichere die geänderte Einstellung
-          });
-      });
-  }
+  return 0;
 }
-
-/* ################ Modale Dialoge Für Bestätigung des Plugin-Updates ###############*/
-// Modal für Update-Bestätigung
-class UpdateModal extends Modal {
+var UpdateModal = class extends import_obsidian2.Modal {
   constructor(app, latestVersion, plugin) {
     super(app);
     this.latestVersion = latestVersion;
     this.plugin = plugin;
   }
-
   onOpen() {
     const { contentEl } = this;
     contentEl.setText(
-      `Eine neue Version (${this.latestVersion}) des Plugins ist verfügbar. Möchtest du das Update jetzt herunterladen?`
+      `Eine neue Version (${this.latestVersion}) des Plugins ist verf\xFCgbar. M\xF6chtest du das Update jetzt herunterladen?`
     );
-
     const buttonContainer = contentEl.createDiv({
-      cls: "modal-button-container",
+      cls: "modal-button-container"
     });
-
-    // "Ja"-Button
-    const yesButton = buttonContainer.createEl("button", { text: "Ja" });
-    yesButton.onclick = async () => {
+    buttonContainer.createEl("button", { text: "Ja" }).onclick = async () => {
       await this.plugin.downloadAndSave(this.latestVersion);
       this.close();
     };
-
-    // "Nein"-Button
-    const noButton = buttonContainer.createEl("button", { text: "Nein" });
-    noButton.onclick = () => {
-      new Notice("Update abgebrochen.");
+    buttonContainer.createEl("button", { text: "Nein" }).onclick = () => {
+      new import_obsidian2.Notice("Update abgebrochen.");
       this.close();
     };
   }
-
   onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
+    this.contentEl.empty();
   }
-}
-/* ################ REAKTIVIERUNG ######### */
-// Modal für Deaktivierung und Reaktivierung des Plugins
-class ReloadPluginModal extends Modal {
-  constructor(app, plugin) {
-    super(app);
-    this.plugin = plugin;
-  }
-
+};
+var ReloadPluginModal = class extends import_obsidian2.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.setText(
-      "Das Plugin wurde erfolgreich aktualisiert. Um die Änderungen vollständig zu übernehmen, sollte Obsidian neu geladen werden."
+      "Das Plugin wurde erfolgreich aktualisiert. Um die \xC4nderungen vollst\xE4ndig zu \xFCbernehmen, sollte Obsidian neu geladen werden."
     );
-
     const buttonContainer = contentEl.createDiv({
-      cls: "modal-button-container",
+      cls: "modal-button-container"
     });
-
-    // "Obsidian neu laden"-Button
-    const reloadButton = buttonContainer.createEl("button", {
-      text: "Obsidian neu laden",
-    });
-    reloadButton.onclick = () => {
+    buttonContainer.createEl("button", {
+      text: "Obsidian neu laden"
+    }).onclick = () => {
       this.close();
-      // Führe den Obsidian-Befehl aus, um die App neu zu laden
-      this.plugin.app.commands.executeCommandById("app:reload");
-      new Notice("Obsidian wird neu geladen...");
+      this.app.commands.executeCommandById("app:reload");
+      new import_obsidian2.Notice("Obsidian wird neu geladen...");
     };
-
-    // "Später"-Button
-    const laterButton = buttonContainer.createEl("button", { text: "Später" });
-    laterButton.onclick = () => {
+    buttonContainer.createEl("button", { text: "Sp\xE4ter" }).onclick = () => {
       this.close();
-      new Notice("Das Plugin wird nach einem Neustart aktualisiert.");
+      new import_obsidian2.Notice("Das Plugin wird nach einem Neustart aktualisiert.");
     };
   }
-
   onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
+    this.contentEl.empty();
   }
-}
-this.settings;
+};
