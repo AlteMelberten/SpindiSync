@@ -33,9 +33,7 @@ __export(main_exports, {
   default: () => SpindiSyncPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var fs = __toESM(require("node:fs/promises"));
-var path = __toESM(require("node:path"));
-var import_obsidian2 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/settings/settingstab.ts
 var import_obsidian = require("obsidian");
@@ -77,7 +75,10 @@ var DEFAULT_SETTINGS = {
   fetchOnStartup: false
 };
 
-// src/main.ts
+// src/sync/sync-service.ts
+var fs = __toESM(require("node:fs/promises"));
+var path = __toESM(require("node:path"));
+var import_obsidian2 = require("obsidian");
 function getVaultRoot(adapter) {
   if (!("basePath" in adapter) || typeof adapter.basePath !== "string") {
     throw new Error("Der lokale Dateisystempfad des Vaults ist nicht verf\xFCgbar.");
@@ -87,62 +88,30 @@ function getVaultRoot(adapter) {
 function isNotFoundError(error) {
   return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
-var SpindiSyncPlugin = class extends import_obsidian2.Plugin {
-  constructor() {
-    super(...arguments);
-    this.settings = DEFAULT_SETTINGS;
-  }
-  async onload() {
-    console.log("SpindiSync-Plugin geladen, Version:", this.manifest.version);
-    await this.loadSettings();
-    await this.checkForUpdates();
-    if (this.settings.fetchOnStartup) {
-      void this.runDownload();
-    }
-    this.addCommand({
-      id: "run-fetch",
-      name: "Run Synchronization",
-      callback: () => this.runDownload()
-    });
-    this.addRibbonIcon(
-      "refresh-cw",
-      "Run Spindi Download",
-      () => this.runDownload()
-    );
-    this.addSettingTab(new SpindiSyncSettingTab(this.app, this));
-  }
-  onunload() {
-    console.log("SpindiSync Plugin entladen.");
-  }
-  async loadSettings() {
-    const savedSettings = await this.loadData();
-    this.settings = {
-      ...DEFAULT_SETTINGS,
-      ...savedSettings
-    };
-  }
-  async saveSettings() {
-    await this.saveData(this.settings);
+var SyncService = class {
+  constructor(app, getSettings) {
+    this.app = app;
+    this.getSettings = getSettings;
   }
   async runDownload() {
     try {
-      const sourceRoot = this.settings.sourceDir.trim();
+      const settings = this.getSettings();
+      const sourceRoot = settings.sourceDir.trim();
       if (!sourceRoot) {
         throw new Error("Bitte zuerst ein Quellverzeichnis festlegen.");
       }
       const vaultRoot = getVaultRoot(this.app.vault.adapter);
-      const targetFolders = ["pages", "assets"];
       const logFilePath = path.join(vaultRoot, "pages", "log.md");
       const logMessages = [];
       await fs.mkdir(path.dirname(logFilePath), { recursive: true });
       const writeLog = async (message2) => {
         logMessages.push(message2);
-        if (this.settings.logEnabled) {
+        if (settings.logEnabled) {
           await fs.appendFile(logFilePath, `${message2}
 `, "utf8");
         }
       };
-      for (const folder of targetFolders) {
+      for (const folder of ["pages", "assets"]) {
         const sourceDir = path.join(sourceRoot, folder);
         const targetDir = path.join(vaultRoot, folder);
         await fs.mkdir(targetDir, { recursive: true });
@@ -190,6 +159,93 @@ ${logMessages.join("\n")}` : "Keine Dateien zum Synchronisieren gefunden.";
       }
     }
   }
+};
+
+// src/update/update-service.ts
+var fs2 = __toESM(require("node:fs/promises"));
+var path2 = __toESM(require("node:path"));
+var import_obsidian4 = require("obsidian");
+
+// src/update/update-modals.ts
+var import_obsidian3 = require("obsidian");
+var UpdateModal = class extends import_obsidian3.Modal {
+  constructor(app, latestVersion, onConfirm) {
+    super(app);
+    this.latestVersion = latestVersion;
+    this.onConfirm = onConfirm;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.setText(
+      `Eine neue Version (${this.latestVersion}) des Plugins ist verf\xFCgbar. M\xF6chtest du das Update jetzt herunterladen?`
+    );
+    const buttonContainer = contentEl.createDiv({
+      cls: "modal-button-container"
+    });
+    buttonContainer.createEl("button", { text: "Ja" }).onclick = async () => {
+      await this.onConfirm();
+      this.close();
+    };
+    buttonContainer.createEl("button", { text: "Nein" }).onclick = () => {
+      new import_obsidian3.Notice("Update abgebrochen.");
+      this.close();
+    };
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+};
+var ReloadPluginModal = class extends import_obsidian3.Modal {
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.setText(
+      "Das Plugin wurde erfolgreich aktualisiert. Um die \xC4nderungen vollst\xE4ndig zu \xFCbernehmen, sollte Obsidian neu geladen werden."
+    );
+    const buttonContainer = contentEl.createDiv({
+      cls: "modal-button-container"
+    });
+    buttonContainer.createEl("button", {
+      text: "Obsidian neu laden"
+    }).onclick = () => {
+      this.close();
+      this.app.commands.executeCommandById("app:reload");
+      new import_obsidian3.Notice("Obsidian wird neu geladen...");
+    };
+    buttonContainer.createEl("button", { text: "Sp\xE4ter" }).onclick = () => {
+      this.close();
+      new import_obsidian3.Notice("Das Plugin wird nach einem Neustart aktualisiert.");
+    };
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+};
+
+// src/update/update-service.ts
+function getVaultRoot2(adapter) {
+  if (!("basePath" in adapter) || typeof adapter.basePath !== "string") {
+    throw new Error("Der lokale Dateisystempfad des Vaults ist nicht verf\xFCgbar.");
+  }
+  return adapter.basePath;
+}
+function compareVersions(left, right) {
+  var _a, _b;
+  const leftParts = left.split(".").map(Number);
+  const rightParts = right.split(".").map(Number);
+  const partCount = Math.max(leftParts.length, rightParts.length);
+  for (let index = 0; index < partCount; index += 1) {
+    const difference = ((_a = leftParts[index]) != null ? _a : 0) - ((_b = rightParts[index]) != null ? _b : 0);
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+  return 0;
+}
+var UpdateService = class {
+  constructor(app, manifest) {
+    this.app = app;
+    this.manifest = manifest;
+  }
   async checkForUpdates() {
     const updateUrl = this.manifest.updateUrl;
     if (!updateUrl) {
@@ -205,14 +261,18 @@ ${logMessages.join("\n")}` : "Keine Dateien zum Synchronisieren gefunden.";
       const versions = await response.json();
       const latestVersion = Object.keys(versions).sort(compareVersions).pop();
       if (latestVersion && compareVersions(latestVersion, this.manifest.version) > 0) {
-        new import_obsidian2.Notice(
+        new import_obsidian4.Notice(
           `Eine neue Version (${latestVersion}) des Plugins ist verf\xFCgbar!`
         );
-        new UpdateModal(this.app, latestVersion, this).open();
+        new UpdateModal(
+          this.app,
+          latestVersion,
+          () => this.downloadAndSave(latestVersion)
+        ).open();
       }
     } catch (error) {
       console.warn("Fehler beim Update-Check:", error);
-      new import_obsidian2.Notice(
+      new import_obsidian4.Notice(
         "Update-Check fehlgeschlagen. Das Plugin funktioniert weiterhin."
       );
     }
@@ -222,18 +282,18 @@ ${logMessages.join("\n")}` : "Keine Dateien zum Synchronisieren gefunden.";
     try {
       const filesToUpdate = ["manifest.json", "main.js"];
       const repoBase = `https://raw.githubusercontent.com/AlteMelberten/SpindiSync/${latestVersion}/`;
-      const vaultRoot = getVaultRoot(this.app.vault.adapter);
-      const pluginFolder = path.join(
+      const vaultRoot = getVaultRoot2(this.app.vault.adapter);
+      const pluginFolder = path2.join(
         vaultRoot,
-        (_a = this.manifest.dir) != null ? _a : path.join(this.app.vault.configDir, "plugins", this.manifest.id)
+        (_a = this.manifest.dir) != null ? _a : path2.join(this.app.vault.configDir, "plugins", this.manifest.id)
       );
       for (const file of filesToUpdate) {
         const response = await fetch(`${repoBase}${file}`);
         if (!response.ok) {
           throw new Error(`Fehler beim Abrufen von ${file}: ${response.status}`);
         }
-        await fs.writeFile(
-          path.join(pluginFolder, file),
+        await fs2.writeFile(
+          path2.join(pluginFolder, file),
           await response.text(),
           "utf8"
         );
@@ -242,72 +302,49 @@ ${logMessages.join("\n")}` : "Keine Dateien zum Synchronisieren gefunden.";
     } catch (error) {
       console.error("Fehler beim Herunterladen des Updates:", error);
       const message = error instanceof Error ? error.message : "Unbekannter Fehler";
-      new import_obsidian2.Notice(`Update fehlgeschlagen: ${message}`);
+      new import_obsidian4.Notice(`Update fehlgeschlagen: ${message}`);
     }
   }
 };
-function compareVersions(left, right) {
-  var _a, _b;
-  const leftParts = left.split(".").map(Number);
-  const rightParts = right.split(".").map(Number);
-  const partCount = Math.max(leftParts.length, rightParts.length);
-  for (let index = 0; index < partCount; index += 1) {
-    const difference = ((_a = leftParts[index]) != null ? _a : 0) - ((_b = rightParts[index]) != null ? _b : 0);
-    if (difference !== 0) {
-      return difference;
+
+// src/main.ts
+var SpindiSyncPlugin = class extends import_obsidian5.Plugin {
+  constructor() {
+    super(...arguments);
+    this.settings = DEFAULT_SETTINGS;
+  }
+  async onload() {
+    console.log("SpindiSync-Plugin geladen, Version:", this.manifest.version);
+    await this.loadSettings();
+    this.syncService = new SyncService(this.app, () => this.settings);
+    this.updateService = new UpdateService(this.app, this.manifest);
+    await this.updateService.checkForUpdates();
+    if (this.settings.fetchOnStartup) {
+      void this.syncService.runDownload();
     }
-  }
-  return 0;
-}
-var UpdateModal = class extends import_obsidian2.Modal {
-  constructor(app, latestVersion, plugin) {
-    super(app);
-    this.latestVersion = latestVersion;
-    this.plugin = plugin;
-  }
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.setText(
-      `Eine neue Version (${this.latestVersion}) des Plugins ist verf\xFCgbar. M\xF6chtest du das Update jetzt herunterladen?`
-    );
-    const buttonContainer = contentEl.createDiv({
-      cls: "modal-button-container"
+    this.addCommand({
+      id: "run-fetch",
+      name: "Run Synchronization",
+      callback: () => this.syncService.runDownload()
     });
-    buttonContainer.createEl("button", { text: "Ja" }).onclick = async () => {
-      await this.plugin.downloadAndSave(this.latestVersion);
-      this.close();
-    };
-    buttonContainer.createEl("button", { text: "Nein" }).onclick = () => {
-      new import_obsidian2.Notice("Update abgebrochen.");
-      this.close();
-    };
-  }
-  onClose() {
-    this.contentEl.empty();
-  }
-};
-var ReloadPluginModal = class extends import_obsidian2.Modal {
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.setText(
-      "Das Plugin wurde erfolgreich aktualisiert. Um die \xC4nderungen vollst\xE4ndig zu \xFCbernehmen, sollte Obsidian neu geladen werden."
+    this.addRibbonIcon(
+      "refresh-cw",
+      "Run Spindi Download",
+      () => this.syncService.runDownload()
     );
-    const buttonContainer = contentEl.createDiv({
-      cls: "modal-button-container"
-    });
-    buttonContainer.createEl("button", {
-      text: "Obsidian neu laden"
-    }).onclick = () => {
-      this.close();
-      this.app.commands.executeCommandById("app:reload");
-      new import_obsidian2.Notice("Obsidian wird neu geladen...");
-    };
-    buttonContainer.createEl("button", { text: "Sp\xE4ter" }).onclick = () => {
-      this.close();
-      new import_obsidian2.Notice("Das Plugin wird nach einem Neustart aktualisiert.");
+    this.addSettingTab(new SpindiSyncSettingTab(this.app, this));
+  }
+  onunload() {
+    console.log("SpindiSync Plugin entladen.");
+  }
+  async loadSettings() {
+    const savedSettings = await this.loadData();
+    this.settings = {
+      ...DEFAULT_SETTINGS,
+      ...savedSettings
     };
   }
-  onClose() {
-    this.contentEl.empty();
+  async saveSettings() {
+    await this.saveData(this.settings);
   }
 };
