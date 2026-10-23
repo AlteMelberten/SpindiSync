@@ -3,9 +3,9 @@ export interface SpindiSyncSettings {
   logEnabled: boolean;
   fetchOnStartup: boolean;
 }
-
+//nur für den Fall, dass data.json (noch) nicht existiert und Einstellungen trotzdem gesetzt werden können
 export const DEFAULT_SETTINGS: SpindiSyncSettings = {
-  sourceDir: "E:\\Schule\\Fächer\\INF\\inf 07\\KST7_Src_test",
+  sourceDir: "E:\\SpindiSynvDwnl",
   logEnabled: true,
   fetchOnStartup: false,
 };

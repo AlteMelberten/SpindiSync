@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "sourceDir",
+      "type": "promptString",
+      "description": "Quellverzeichnis des SpindiSync-Plugins",
+      "default": "E:\\Schule\\Fächer\\INF\\inf 07\\KST7_Src_test"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "SpindiSync: Test-Markdown erstellen",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "$pagesDir = Join-Path $env:SPINDISYNC_SOURCE_DIR 'pages'; New-Item -ItemType Directory -Force -Path $pagesDir | Out-Null; $content = '# SpindiSync-Test' + [Environment]::NewLine + [Environment]::NewLine + 'Diese Datei dient zum Testen des SpindiSync-Plugins.'; Set-Content -Path (Join-Path $pagesDir 'SpindiSync-Test.md') -Value $content -Encoding utf8"
+      ],
+      "options": {
+        "env": {
+          "SPINDISYNC_SOURCE_DIR": "${input:sourceDir}"
+        }
+      },
+      "problemMatcher": []
+    }
+  ]
+}

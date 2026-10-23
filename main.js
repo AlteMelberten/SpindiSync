@@ -72,7 +72,7 @@ var SpindiSyncSettingTab = class extends import_obsidian.PluginSettingTab {
 
 // src/settings/settings.ts
 var DEFAULT_SETTINGS = {
-  sourceDir: "E:\\Schule\\F\xE4cher\\INF\\inf 07\\KST7_Src_test",
+  sourceDir: "E:\\SpindiSynvDwnl",
   logEnabled: true,
   fetchOnStartup: false
 };
